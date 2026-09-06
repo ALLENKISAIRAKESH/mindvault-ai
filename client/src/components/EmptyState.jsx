@@ -1,4 +1,19 @@
+import React from 'react';
+
 export default function EmptyState({ icon: Icon, title, description, action }) {
+  const renderAction = () => {
+    if (!action) return null;
+    if (React.isValidElement(action)) return action;
+    if (typeof action === 'object' && action.label && action.onClick) {
+      return (
+        <button onClick={action.onClick} className="btn-primary">
+          {action.label}
+        </button>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center animate-fade-in">
       {Icon && (
@@ -15,7 +30,7 @@ export default function EmptyState({ icon: Icon, title, description, action }) {
           {description}
         </p>
       )}
-      {action && action}
+      {renderAction()}
     </div>
   );
 }

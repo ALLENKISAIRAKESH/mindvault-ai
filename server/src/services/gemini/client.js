@@ -9,7 +9,7 @@ import {
 import { validateInsight } from '../../schemas/insight.js';
 import logger from '../../lib/logger.js';
 
-const MODEL_NAME = 'gemini-2.0-flash';
+const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const MAX_OUTPUT_TOKENS = 4096;
 const TEMPERATURE = 0.7;
 const TIMEOUT_MS = 30000;

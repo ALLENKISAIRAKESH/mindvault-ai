@@ -17,6 +17,21 @@
           "messageCount": 0,
           "summary": null,
           "insightId": null
+        },
+        "a49a8be7-a16d-4c6b-aa65-0ff52286e848": {
+          "title": "i want to start coding",
+          "createdAt": "2026-09-06T17:20:57.351Z",
+          "updatedAt": "2026-09-06T17:21:12.177Z",
+          "messageCount": 1,
+          "summary": null,
+          "insightId": null,
+          "messages": {
+            "190d9ff6-3e66-4d9f-8329-fb8d78125716": {
+              "role": "user",
+              "content": "i want to start coding",
+              "createdAt": "2026-09-06T17:21:12.176Z"
+            }
+          }
         }
       }
     }

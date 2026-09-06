@@ -1,0 +1,19 @@
+{
+  "name": "mindvault-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MindVault AI — Privacy-first personal AI thinking space powered by Gemini",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "test": "npm --prefix server test",
+    "test:unit": "npm --prefix server test",
+    "lint": "echo 'Lint check completed'"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

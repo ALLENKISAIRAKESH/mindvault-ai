@@ -1,0 +1,16 @@
+{
+  "users": {
+    "MG9tP8xC2wYAazkKIs614iXAXKd2": {
+      "sessions": {
+        "cb16d720-f37b-443a-84b8-9aa41bff3cb1": {
+          "title": "New Session",
+          "createdAt": "2026-09-06T07:52:30.770Z",
+          "updatedAt": "2026-09-06T07:52:30.770Z",
+          "messageCount": 0,
+          "summary": null,
+          "insightId": null
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import * as api from '../lib/api';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -7,7 +7,6 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import VoiceNarrationButton from '../components/VoiceNarrationButton';
 import ZeroKnowledgeLock from '../components/ZeroKnowledgeLock';
 import { formatSessionMarkdown, downloadFile, printFormattedBrief } from '../lib/exportUtils';
-import { encryptVaultText, decryptVaultText } from '../lib/cryptoVault';
 import {
   Plus,
   Send,
@@ -37,6 +36,26 @@ const THINKING_PERSONAS = [
   { id: 'mindfulness', label: 'Mindfulness Guide', icon: Smile, color: 'text-purple-400', desc: 'Calm perspective & emotional clarity' },
 ];
 
+function safeDateString(val) {
+  try {
+    if (!val) return 'Recent';
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? 'Recent' : d.toLocaleDateString();
+  } catch {
+    return 'Recent';
+  }
+}
+
+function safeDateTimeString(val) {
+  try {
+    if (!val) return 'Just now';
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? 'Just now' : d.toLocaleString();
+  } catch {
+    return 'Just now';
+  }
+}
+
 export default function Journal() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -58,16 +77,20 @@ export default function Journal() {
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const loadedSessionId = useRef(null);
 
   useEffect(() => {
     loadSessions();
   }, []);
 
+  // Handle URL param session selection once
   useEffect(() => {
     const sessionId = searchParams.get('session');
-    if (sessionId && sessions.length > 0) {
+    if (sessionId && sessions.length > 0 && loadedSessionId.current !== sessionId) {
       const session = sessions.find((s) => s.id === sessionId);
-      if (session) selectSession(session);
+      if (session) {
+        selectSession(session);
+      }
     }
   }, [searchParams, sessions]);
 
@@ -78,7 +101,13 @@ export default function Journal() {
   async function loadSessions() {
     try {
       const res = await api.getSessions();
-      setSessions(res.sessions || []);
+      const list = res.sessions || [];
+      setSessions(list);
+      // Auto-select first session if present and none selected
+      const urlSession = searchParams.get('session');
+      if (!urlSession && list.length > 0 && !activeSession) {
+        selectSession(list[0]);
+      }
     } catch (err) {
       console.error('Failed to load sessions:', err);
     } finally {
@@ -98,18 +127,25 @@ export default function Journal() {
   }
 
   async function selectSession(session) {
+    if (!session?.id) return;
+    loadedSessionId.current = session.id;
     setActiveSession(session);
     setMessages([]);
     setLoadingMessages(true);
     setError('');
-    setSearchParams({ session: session.id });
+
+    if (searchParams.get('session') !== session.id) {
+      setSearchParams({ session: session.id }, { replace: true });
+    }
 
     try {
       const res = await api.getSession(session.id);
-      setMessages(res.session.messages || []);
-      setActiveSession(res.session);
+      const fetched = res.session || {};
+      setMessages(fetched.messages || []);
+      setActiveSession((prev) => ({ ...prev, ...fetched }));
     } catch (err) {
-      setError('Failed to load session');
+      console.error('Failed to load session:', err);
+      setError('Failed to load session messages');
     } finally {
       setLoadingMessages(false);
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -135,15 +171,14 @@ export default function Journal() {
 
     try {
       const res = await api.sendMessage(activeSession.id, userMessage, selectedPersona);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: res.message.id,
-          role: 'assistant',
-          content: res.message.content,
-          createdAt: res.message.createdAt,
-        },
-      ]);
+      const assistantMsg = res.message || {
+        id: `ast-${Date.now()}`,
+        role: 'assistant',
+        content: res.response || 'Thought recorded.',
+        createdAt: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, assistantMsg]);
 
       setSessions((prev) =>
         prev.map((s) =>
@@ -191,7 +226,8 @@ export default function Journal() {
       if (activeSession?.id === sessionId) {
         setActiveSession(null);
         setMessages([]);
-        setSearchParams({});
+        loadedSessionId.current = null;
+        setSearchParams({}, { replace: true });
       }
     } catch (err) {
       setError('Failed to delete session');
@@ -205,7 +241,7 @@ export default function Journal() {
   const handleExportMarkdown = () => {
     if (!activeSession) return;
     const md = formatSessionMarkdown({ ...activeSession, messages });
-    const filename = `mindvault-session-${activeSession.id.substring(0, 8)}.md`;
+    const filename = `mindvault-session-${activeSession.id?.substring(0, 8) || 'export'}.md`;
     downloadFile(filename, md);
     setExportMenuOpen(false);
   };
@@ -263,9 +299,9 @@ export default function Journal() {
                 }`}
               >
                 <div className="min-w-0 flex-1 mr-2">
-                  <p className="text-xs font-medium truncate">{session.title}</p>
+                  <p className="text-xs font-medium truncate">{session.title || 'Untitled Session'}</p>
                   <p className="text-[10px] text-gray-500">
-                    {new Date(session.updatedAt || session.createdAt).toLocaleDateString()}
+                    {safeDateString(session.updatedAt || session.createdAt)}
                   </p>
                 </div>
                 <button
@@ -320,16 +356,14 @@ export default function Journal() {
                     className="text-sm font-semibold truncate"
                     style={{ color: 'var(--color-white)' }}
                   >
-                    {activeSession.title}
+                    {activeSession.title || 'Untitled Session'}
                   </h2>
                   <p
                     className="text-[10px]"
                     style={{ color: 'var(--color-muted)' }}
                   >
                     <Clock size={9} className="inline mr-1" />
-                    {new Date(
-                      activeSession.updatedAt || activeSession.createdAt
-                    ).toLocaleString()}
+                    {safeDateTimeString(activeSession.updatedAt || activeSession.createdAt)}
                   </p>
                 </div>
               </div>
@@ -448,7 +482,7 @@ export default function Journal() {
               ) : (
                 messages.map((msg, i) => (
                   <div
-                    key={msg.id}
+                    key={msg.id || i}
                     className={`flex gap-3 animate-fade-in ${
                       msg.role === 'user' ? 'justify-end' : ''
                     }`}

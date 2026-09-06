@@ -1,12 +1,15 @@
 import rateLimit from 'express-rate-limit';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 /**
  * General API rate limiter.
  * In-memory store — suitable for single Cloud Run instance.
  */
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  max: isDev ? 10000 : 2000,
+  skip: () => isDev,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -19,7 +22,8 @@ export const generalLimiter = rateLimit({
  */
 export const chatLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 15,
+  max: isDev ? 500 : 60,
+  skip: () => isDev,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -32,7 +36,8 @@ export const chatLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: isDev ? 500 : 60,
+  skip: () => isDev,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
